@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api';
+import { auth } from '../services/auth';
 
 export interface Note {
   id: number;
@@ -16,7 +17,15 @@ export default function useNotes() {
   const loadNotes = useCallback(async () => {
     setIsLoading(true);
     setError(null);
+  
     try {
+      const token = await auth.getToken?.(); // si lo tienes así en tu servicio
+      if (!token) {
+        console.log('[useNotes] Usuario no autenticado, no se cargan notas');
+        setNotes([]); // opcional, por si quieres limpiar notas previas
+        return;
+      }
+  
       const tareas = await api.getTareas();
       const adaptedNotes = tareas.map(tarea => ({
         ...tarea,
@@ -25,12 +34,13 @@ export default function useNotes() {
       }));
       setNotes(adaptedNotes);
     } catch (err) {
+      console.error('[useNotes] Error al cargar notas:', err);
       setError('Error al cargar las notas');
-      console.error(err);
     } finally {
       setIsLoading(false);
     }
   }, []);
+  
 
   const saveNote = async (note: Omit<Note, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
